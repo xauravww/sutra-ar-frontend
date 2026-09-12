@@ -1,0 +1,495 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy: #1E4E79;
+  --color-navy-2: #2C6199;
+  --color-navy-dark: #163A5C;
+  --color-tint: #EDF3F9;
+  --color-tint-2: #E1EBF5;
+
+  --color-sutra-bg: #EEF1F5;
+  --color-sutra-card: #FFFFFF;
+  --color-sutra-ink: #161A1F;
+  --color-sutra-ink-2: #454C56;
+  --color-sutra-ink-3: #6B7481;
+  --color-sutra-line: #DFE3EA;
+  --color-sutra-line-2: #EBEEF3;
+
+  --color-amber-bg: #FBF0DC;
+  --color-amber-ink: #87560A;
+  --color-amber-dot: #CE8500;
+  --color-green-bg: #E4F3E9;
+  --color-green-ink: #1C6A35;
+  --color-green-dot: #1D8A44;
+
+  --color-focus: #3A7CC0;
+
+  /*
+   * One family for the whole page. IBM Plex Sans Arabic carries both the
+   * Arabic and the Latin glyphs the UI needs, so Latin identifiers (case
+   * numbers, emails, API keys) do not fall through to a different fallback
+   * face mid-sentence and end up a different weight at the same font-size.
+   */
+  --font-sans: var(--font-plex-arabic), 'IBM Plex Sans Arabic', 'Segoe UI', ui-sans-serif, system-ui, Arial, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+   * Arabic metrics.
+   *
+   * Arabic sits on a taller baseline-to-baseline rhythm than Latin at the same
+   * font-size: the script uses far more vertical space above and below the
+   * baseline (ascenders, descenders, and the dots that distinguish letters),
+   * and its diacritics collide at Latin line-heights. 1.75 rather than 1.55,
+   * and 17.5px rather than 17px, keeps the counters open.
+   *
+   * `word-spacing` is left alone, but `letter-spacing` is normalised to
+   * `normal` below: letter-spacing breaks Arabic cursive joining outright,
+   * because the joining forms are contextual glyphs computed by the shaper,
+   * not separate characters that can be pushed apart.
+   */
+  body {
+    background: var(--color-sutra-bg);
+    color: var(--color-sutra-ink);
+    font-family: var(--font-sans);
+    font-size: 17.5px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+  }
+
+  /*
+   * Native form-control chrome (bugs #1601, #1602, #1603).
+   *
+   * A text input or select with `appearance: auto` is painted by the browser
+   * with its own inset border and rounded box, on top of whatever CSS we set —
+   * dropping the border to `border-0` does not remove it. Sitting inside the
+   * wrapper that already draws a border (SearchInput, FilterSelect, the admin
+   * dialogs) that reads as a double border on every search box, filter and
+   * dialog on the users page. Removing the native appearance leaves only the
+   * app's own styling.
+   *
+   * Checkboxes, radios, file pickers, ranges and colour swatches keep their
+   * native appearance — they are not re-styled by the app.
+   */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /*
+   * The native dropdown arrow goes with the native appearance, so draw one.
+   * Selects that render their own chevron icon override this with
+   * `[background-image:none]` (FacetSelect, the curation sort dropdown).
+   *
+   * Drawn on the *inline-end* edge — `padding-inline-end` resolves to the left
+   * side under RTL — so the arrow sits where the text ends, opposite the start
+   * of the text. `background-position` has no logical form, so the offset is
+   * written physically, which is correct here because the document direction
+   * is fixed: the app is RTL-only.
+   */
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7481' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.6rem center;
+    background-size: 0.75rem;
+    padding-inline-end: 2rem;
+  }
+
+  /*
+   * Letter-spacing is fatal to Arabic and must not survive anywhere.
+   *
+   * Arabic letters join contextually: the shaper picks initial/medial/final
+   * forms based on the letters around them. Tracking inserts space *between*
+   * glyphs after shaping, so a tracked Arabic word breaks into disconnected
+   * letterforms and stops reading as a word rather than merely looking loose.
+   *
+   * The conversion also removes every `tracking-*` utility from the markup, so
+   * this rule is a backstop rather than the mechanism — an unlayered rule
+   * beats Tailwind's layered utilities regardless of specificity, which is
+   * what makes it a usable safety net for anything the sweep misses, including
+   * tracking set inline or introduced by a dependency's own stylesheet.
+   */
+  *,
+  *::before,
+  *::after {
+    letter-spacing: normal;
+  }
+}
+
+/*
+ * Mirror a directional glyph for RTL.
+ *
+ * CSS can mirror a box, but it cannot mirror what is *inside* an SVG path or
+ * an arrow character: `dir="rtl"` flips layout, not artwork. A right-pointing
+ * chevron stays right-pointing and now points the wrong way relative to the
+ * text it belongs to. Opting the element into this class flips the glyph
+ * itself. Icons that carry a rotation as well (a chevron that rotates 90
+ * degrees when a section expands) must put this on a wrapper element, not on
+ * the svg — stacking both transforms on one element leaves the "expanded"
+ * state pointing sideways instead of down.
+ */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/*
+ * Print-to-PDF for the mediation case summary.
+ *
+ * `src/lib/mediationSummaryPdf.ts` appends the whole document as a
+ * `.sutra-print-root` div on `<body>` and calls `window.print()`. While that
+ * div is present, printing must produce *only* the document — so every other
+ * direct child of `<body>` (the app shell, Next's route announcer, toast
+ * portals) is hidden. The div is removed on `afterprint`, which puts the app
+ * back exactly as it was.
+ *
+ * The document's own styling lives in a `<style>` block inside that div rather
+ * than here: it is a legal document, not app chrome, and it must not inherit
+ * Tailwind's reset or the app's type scale. Only the mechanism lives here.
+ *
+ * On screen the div is `display: none`, so nothing flashes before the dialog
+ * opens. Page numbers and margins come from the browser's own print options —
+ * `@page` margin boxes are not implemented in Chrome, so there is no way to
+ * draw a running footer from CSS.
+ */
+.sutra-print-root {
+  display: none;
+}
+
+@media print {
+  body > *:not(.sutra-print-root) {
+    display: none !important;
+  }
+
+  .sutra-print-root {
+    display: block;
+  }
+
+  @page {
+    size: A4;
+    margin: 16mm 15mm;
+  }
+}
+
+/*
+ * Mobile readability (bug #1597).
+ *
+ * iOS Safari zooms the whole viewport when a focused form control is smaller
+ * than 16px, leaving the user on a magnified page with the layout scrolled
+ * sideways. The app's fields are 13-15px, so every tap on an input zoomed the
+ * page. 16px on small screens removes the zoom; desktop keeps the designed
+ * type scale.
+ *
+ * Unlayered on purpose: these rules must win over the utility classes that
+ * set the smaller sizes on each field.
+ */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/*
+ * The app's smallest meta labels are 11-11.5px, which QA measured as the
+ * "11px body font" in bug #1597 (the body itself is 17px). Raise that floor
+ * on phones. The `:not([class*="sm:…"])` guards skip elements whose small
+ * size is a deliberate responsive variant — those are already larger at this
+ * width and must not be shrunk.
+ */
+@media (max-width: 640px) {
+  [class*="text-[11px]"]:not([class*="sm:text-[11px]"]):not([class*="md:text-[11px]"]):not([class*="lg:text-[11px]"]),
+  [class*="text-[11.5px]"]:not([class*="sm:text-[11.5px]"]):not([class*="md:text-[11.5px]"]):not([class*="lg:text-[11.5px]"]) {
+    font-size: 12.5px;
+  }
+}
+
+/*
+ * Touch targets (bug #1598).
+ *
+ * QA measured 16x16 native checkbox/radio inputs and 36x36 icon-only buttons.
+ * WCAG 2.5.8 (AA) sets a 24x24 floor; Apple HIG and WCAG 2.5.5 (AAA) ask for
+ * 44x44. Touch devices only — a mouse pointer is not affected, so desktop
+ * density is unchanged.
+ *
+ * `:has(> svg:only-child)` restricts the 44px rule to icon-only buttons;
+ * text buttons and inline controls keep their size. Browsers without `:has()`
+ * ignore that rule and fall back to the current sizes, so this degrades safely.
+ * `[data-tap-compact]` opts a control out where growing it would burst its
+ * container (the clear button inside the search field).
+ */
+@media (pointer: coarse) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  button:has(> svg:only-child):not([data-tap-compact]),
+  select {
+    min-height: 44px;
+  }
+
+  button:has(> svg:only-child):not([data-tap-compact]) {
+    min-width: 44px;
+  }
+}
+
+/* Hide scrollbar while keeping element scrollable (mobile tab strips) */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Chat panel slide-in */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-in {
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Deep-link highlight flash for case items */
+@keyframes itemFlash {
+  0% {
+    background-color: #dce9f5;
+    box-shadow: 0 0 0 3px rgba(19, 41, 75, 0.18);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.flash-item {
+  animation: itemFlash 2.6s ease-out both;
+}
+
+/* Chat markdown rendering */
+.chat-markdown p {
+  margin-bottom: 0.5em;
+}
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown strong {
+  font-weight: 700;
+  color: var(--color-sutra-ink);
+}
+.chat-markdown em {
+  font-style: italic;
+}
+.chat-markdown ul,
+.chat-markdown ol {
+  padding-inline-start: 1.25em;
+  margin: 0.4em 0;
+}
+.chat-markdown ul {
+  list-style-type: disc;
+}
+.chat-markdown ol {
+  list-style-type: decimal;
+}
+.chat-markdown li {
+  margin-bottom: 0.2em;
+}
+.chat-markdown li:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  font-weight: 700;
+  color: var(--color-sutra-ink);
+  margin: 0.6em 0 0.3em;
+}
+.chat-markdown h1:first-child,
+.chat-markdown h2:first-child,
+.chat-markdown h3:first-child,
+.chat-markdown h4:first-child {
+  margin-top: 0;
+}
+.chat-markdown h1 { font-size: 1.1em; }
+.chat-markdown h2 { font-size: 1.05em; }
+.chat-markdown h3 { font-size: 1em; }
+.chat-markdown code {
+  font-size: 0.88em;
+  background: rgba(0,0,0,0.06);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.chat-markdown pre {
+  background: var(--color-sutra-ink);
+  color: #e2e8f0;
+  padding: 0.75em 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+.chat-markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.chat-markdown blockquote {
+  border-inline-start: 3px solid var(--color-navy);
+  padding-inline-start: 0.75em;
+  margin: 0.5em 0;
+  color: var(--color-sutra-ink-2);
+}
+.chat-markdown hr {
+  border: none;
+  border-top: 1px solid var(--color-sutra-line);
+  margin: 0.75em 0;
+}
+.chat-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.9em;
+}
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid var(--color-sutra-line);
+  padding: 0.4em 0.6em;
+  text-align: start;
+}
+.chat-markdown th {
+  background: var(--color-tint);
+  font-weight: 700;
+}
+
+/* Avatar initials and the notification count are decoration with a
+   data attribute behind them (bugs #1610, #1611).
+
+   Painted by CSS rather than written into the DOM as text, so they do not
+   concatenate into the text of the link or button that wraps them — an
+   avatar initial used to read as part of the username ("Oowner") and the
+   unread badge as a bare number. Both controls name themselves through
+   aria-label instead, and the elements are aria-hidden. */
+.avatar-initial::after {
+  content: attr(data-initial);
+}
+
+.notif-badge::after {
+  content: attr(data-count);
+}
+
+::selection {
+  background: var(--color-tint-2);
+}
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-sutra-line);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sutra-ink-3);
+}
+
+/* Hide the browser's native password reveal so only the app's own show/hide
+   control shows (AUTH-01). Edge/IE reveal + the autofill clearance buttons. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-contacts-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Settlement editor.
+ *
+ * The empty-state prompt used to be a `::before` rule with the string written
+ * into the stylesheet. That string was invisible to browser translation:
+ * Chrome (and every other translator that walks the DOM) translates text
+ * nodes, and CSS-generated content is not a text node — it never enters the
+ * accessibility tree or the translation pipeline. The prompt is now a real
+ * element rendered by the editor component, so it reads aloud and translates
+ * like any other paragraph. Nothing user-facing is injected through
+ * `content:` in this file for that reason.
+ */
+.rich-settlement-editor .ProseMirror {
+  min-height: 240px;
+  outline: none;
+}
+.rich-settlement-editor .ProseMirror h2 {
+  margin: 0.75em 0 0.35em;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+.rich-settlement-editor .ProseMirror ul,
+.rich-settlement-editor .ProseMirror ol {
+  margin: 0.5em 0;
+  padding-inline-start: 1.5em;
+}
+.rich-settlement-editor .ProseMirror blockquote {
+  margin: 0.75em 0;
+  padding-inline-start: 0.75em;
+  border-inline-start: 3px solid var(--color-sutra-line);
+  color: var(--color-sutra-ink-2);
+}
+.rich-settlement-editor h2 {
+  margin: 0.75em 0 0.35em;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+.rich-settlement-editor ul,
+.rich-settlement-editor ol {
+  margin: 0.5em 0;
+  padding-inline-start: 1.5em;
+}
+.rich-settlement-editor blockquote {
+  margin: 0.75em 0;
+  padding-inline-start: 0.75em;
+  border-inline-start: 3px solid var(--color-sutra-line);
+  color: var(--color-sutra-ink-2);
+}
