@@ -11,9 +11,39 @@ import { SearchInput, FilterSelect, EmptyState, ErrorState, StatusBadge } from "
 import Ltr from "@/components/Ltr";
 import { count, dateTime, n, type PluralForms } from "@/lib/num";
 
-const OFFICIAL_CONSTITUTION_URL = "https://www.legislative.gov.in/documents/constitution-of-india/constitution-of-india-AjN2EjMtQWa?pageTitle=Constitution-of-India";
-const LEGISLATIVE_DOCUMENTS_URL = "https://www.legislative.gov.in/documents?page=1";
-const ENGLISH_CONSTITUTION_PDF_URL = "https://www.legislative.gov.in/static/uploads/2025/07/c9fe9c9b6840524844316f74bb1c556c.pdf";
+/**
+ * Official gazettes and legislation portals for the target markets.
+ *
+ * The seeding card used to point at India's Legislative Department and its
+ * Constitution of India. That is the wrong corpus for a product sold across the
+ * Arab world, so it now names each market's own official publisher instead.
+ *
+ * Each entry is the national body that publishes enacted law: an upload from
+ * one of these is a primary source, which is what the corpus should be seeded
+ * from. Add or remove rows freely — the card renders whatever is listed, so
+ * extending coverage to a new market is a one-line change here and needs no
+ * markup edit.
+ *
+ * The URLs are portal roots, not deep links into a particular document. A deep
+ * link rots the moment the publisher reorganises its site, and a root link
+ * still lands the operator somewhere they can search.
+ */
+interface SeedSource {
+  /** Country name in Arabic, matching `@/lib/countries`. */
+  country: string;
+  /** The publishing body, as it names itself. */
+  publisher: string;
+  /** ISO 3166-1 alpha-2 code, used as the React key. */
+  code: string;
+  url: string;
+}
+
+const SEED_SOURCES: SeedSource[] = [
+  { code: "SA", country: "السعودية", publisher: "هيئة الخبراء بمجلس الوزراء", url: "https://www.boe.gov.sa" },
+  { code: "AE", country: "الإمارات", publisher: "بوابة التشريعات", url: "https://uaelegislation.gov.ae" },
+  { code: "EG", country: "مصر", publisher: "المحكمة الدستورية العليا", url: "https://www.cc.gov.eg" },
+  { code: "JO", country: "الأردن", publisher: "ديوان التشريع والرأي", url: "https://www.lob.gov.jo" },
+];
 
 /** Published-source counts, for the result line. */
 const SOURCES: PluralForms = {
@@ -242,13 +272,21 @@ export default function KnowledgeBasePage() {
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-tint text-navy grid place-items-center flex-none" aria-hidden="true">⚖</div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[16px] font-bold text-sutra-ink">تهيئة دستور الهند</h2>
-              <p className="text-[13px] text-sutra-ink-3 mt-1 max-w-2xl">استخدم النسخة الرسمية الصادرة عن الدائرة التشريعية، ثم ارفعها للاستخراج والمراجعة والنشر. يبقى المصدر محفوظًا بإصداراته ويمكن استبداله عند صدور نسخة أحدث.</p>
+              <h2 className="text-[16px] font-bold text-sutra-ink">تهيئة المصادر الرسمية</h2>
+              <p className="text-[13px] text-sutra-ink-3 mt-1 max-w-2xl">ابدأ من الجهة الرسمية التي تنشر التشريع في كل سوق، ثم ارفع النص للاستخراج والمراجعة والنشر. يبقى المصدر محفوظًا بإصداراته ويمكن استبداله عند صدور نسخة أحدث.</p>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {SEED_SOURCES.map((source) => (
+                  <li key={source.code} className="flex items-baseline justify-between gap-3 border border-sutra-line-2 rounded-lg px-3 py-2">
+                    <span className="min-w-0">
+                      <b className="block text-[13px] font-semibold text-sutra-ink">{source.country}</b>
+                      <span className="block text-[12px] text-sutra-ink-3 truncate">{source.publisher}</span>
+                    </span>
+                    <a href={source.url} target="_blank" rel="noreferrer" className="flex-none text-[13px] font-semibold text-navy hover:underline">فتح ↗</a>
+                  </li>
+                ))}
+              </ul>
               <div className="flex flex-wrap items-center gap-3 mt-3">
-                <a href={OFFICIAL_CONSTITUTION_URL} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-navy hover:underline">فتح صفحة الدستور ↗</a>
-                <a href={ENGLISH_CONSTITUTION_PDF_URL} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-navy hover:underline">ملف PDF بالإنجليزية ↗</a>
-                <a href={LEGISLATIVE_DOCUMENTS_URL} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-navy hover:underline">كل الوثائق ↗</a>
-                <Link href="/knowledge-base/upload" className="text-[13px] font-semibold text-navy hover:underline">رفع هذه النسخة</Link>
+                <Link href="/knowledge-base/upload" className="text-[13px] font-semibold text-navy hover:underline">رفع مصدر من هذه الجهات</Link>
               </div>
             </div>
           </div>

@@ -68,7 +68,11 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   CORPUS: "مدوّنة",
 };
 
-/** Small USD values up to 4 decimals, larger ones 2. */
+/**
+ * AI spend. This one is genuinely USD: the per-model rates the usage table is
+ * priced against are OpenAI's published dollar prices, not the plan currency
+ * in `@/lib/currency`.
+ */
 function fmtMoney(v: number): string {
   const abs = Math.abs(v);
   const max = abs > 0 && abs < 1 ? 4 : 2;

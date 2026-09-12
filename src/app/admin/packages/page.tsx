@@ -5,7 +5,8 @@ import { admin, type AdminPlan } from "@/lib/api";
 import { useNotify } from "@/components/ui/Notify";
 import { PageHeader, EmptyState, ErrorState } from "@/components/admin/ui";
 import Ltr from "@/components/Ltr";
-import { count, money, type PluralForms } from "@/lib/num";
+import { amount } from "@/lib/currency";
+import { count, type PluralForms } from "@/lib/num";
 
 interface PlanFeatures {
   tag?: string;
@@ -73,9 +74,9 @@ const PRICE_FIELD_LABEL: Record<string, string> = {
   price_yearly: "السعر السنوي",
 };
 
-/** Plan prices carry no currency of their own; USD is the neutral default. */
+/** Plan prices carry no currency of their own; see `@/lib/currency`. */
 const fmtMoney = (value: number | null | undefined) =>
-  value == null ? "—" : money(value, "USD");
+  value == null ? "—" : amount(value);
 
 export default function AdminPackagesPage() {
   const { toast, confirm } = useNotify();

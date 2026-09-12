@@ -113,14 +113,19 @@ export function nDec(value: Numeric, maximumFractionDigits = 2): string {
 }
 
 /**
- * An amount of money.
+ * An amount of money in a named currency.
  *
- * The currency *code* is not localised away: `ar-EG` renders INR as `₹`, and
- * the amount in Arabic-Indic digits — `‏٤٥٬٠٠٠ ₹`. Letting `Intl` place the
- * symbol means the string is correct for the locale's own conventions instead
- * of a hand-built `"₹" + n(x)` that would put the symbol on the wrong side.
+ * The currency *code* is required and is not localised away: `ar-EG` renders
+ * SAR as `ر.س.‏`, with the amount in Arabic-Indic digits, and `Intl` places the
+ * symbol where the locale puts it rather than where a hand-built
+ * `"₹" + n(x)` would.
+ *
+ * There is deliberately no default. A default here would be a hard-coded
+ * currency choice buried in a formatting helper — which is exactly how the
+ * rupee ended up on a product sold across the Arab world. Call sites use
+ * `amount()` from `./currency`, which names the currency once.
  */
-export function money(value: Numeric, currency = "INR", maximumFractionDigits = 0): string {
+export function money(value: Numeric, currency: string, maximumFractionDigits = 0): string {
   const parsed = toNumber(value);
   if (parsed === null) return "";
   return new Intl.NumberFormat(NUM, {

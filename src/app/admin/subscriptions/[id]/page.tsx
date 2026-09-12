@@ -5,14 +5,15 @@ import Link from "next/link";
 import { admin, type AdminSubscription } from "@/lib/api";
 import { useNotify } from "@/components/ui/Notify";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/admin/ui";
-import { date, money } from "@/lib/num";
+import { amount } from "@/lib/currency";
+import { date } from "@/lib/num";
 import Ltr from "@/components/Ltr";
 
 /** Dates route through the shared Arabic formatter; a dash fills the gap. */
 const fmtDate = (d?: string | null) => date(d) || "—";
 
 /** Money routes through the shared Arabic formatter (Arabic-Indic digits). */
-const fmtMoney = (v?: number | null) => money(v) || "—";
+const fmtMoney = (v?: number | null) => amount(v) || "—";
 
 /** Subscription statuses. The values stay Latin — only the labels are Arabic. */
 const SUB_STATUS_LABELS: Record<string, string> = {

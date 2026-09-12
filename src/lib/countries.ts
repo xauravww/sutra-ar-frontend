@@ -18,11 +18,12 @@
  * - The value on the wire stays ASCII and stable regardless of how the Arabic
  *   label is later edited, so re-wording a label never orphans stored rows.
  *
- * **Backend follow-up:** `getStateCode()` still maps Indian state names and
- * returns `"DL"` for anything it does not recognise, so it will need to be
- * replaced with a country-code map. Until then every record here resolves to
- * the same default code. The API field is still called `state` — only the UI
- * label changed to الدولة — so no payload shape changed.
+ * `getStateCode()` was updated in step with this list: it resolves the same 22
+ * ISO codes, still accepts names (English and Arabic) for records written by
+ * other clients, and returns `"XX"` — the ISO user-assigned range — for
+ * anything it cannot place, rather than the old "DL", which labelled every
+ * unresolved record as Delhi. The API field is still called `state`; only the
+ * UI label changed to الدولة, so no payload shape changed.
  */
 
 export interface Country {

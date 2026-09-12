@@ -5,7 +5,8 @@ import Link from "next/link";
 import { admin } from "@/lib/api";
 import { PageHeader, StatCard, ErrorState } from "@/components/admin/ui";
 import Ltr from "@/components/Ltr";
-import { money, n } from "@/lib/num";
+import { amount } from "@/lib/currency";
+import { n } from "@/lib/num";
 
 interface CompStats {
   cases?: { total?: number; active?: number; delayed?: number };
@@ -18,8 +19,8 @@ interface CompStats {
   };
 }
 
-/** Plan revenue carries no currency of its own; USD is the neutral default. */
-const fmtMoney = (value: string | number) => money(value, "USD");
+/** Plan revenue carries no currency of its own; see `@/lib/currency`. */
+const fmtMoney = (value: string | number) => amount(value);
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<CompStats | null>(null);
