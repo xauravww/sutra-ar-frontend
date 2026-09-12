@@ -196,7 +196,6 @@ export default function AdminSupportDetailPage({ params }: { params: Promise<{ i
         setCanSeeUnassigned(canSee);
       })
       .catch(() => setCanSeeUnassigned(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.role]);
 
   const isOwner = user?.role === "owner";
