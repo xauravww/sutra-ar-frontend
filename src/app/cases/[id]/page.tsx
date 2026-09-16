@@ -1343,20 +1343,34 @@ export default function CaseDetailPage() {
                       <p className="text-[11.5px] text-sutra-ink-3 mt-2 line-clamp-1">
                         {[reference.citation, reference.court, reference.year].filter(Boolean).join(" · ") || "حكم منشور مرجعي"}
                       </p>
-                      {source ? (
-                        <a
-                          href={source}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => void corpusService.recordSourceClick({ query: caseData.title, document_id: reference.document_id, result_count: visibleRelatedCorpusCases.length })}
-                          className="inline-flex items-center gap-1 mt-2.5 text-[12px] font-semibold text-navy hover:underline cursor-pointer"
+                      <div className="flex items-center gap-3 mt-2.5">
+                        {/* View opens the inline viewer: it fetches a fresh
+                            presigned PDF each time, so a private bucket never
+                            leaks an AccessDenied XML page into a new tab. */}
+                        <button
+                          type="button"
+                          onClick={() => void openSource(reference.document_id)}
+                          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-navy hover:underline cursor-pointer"
                         >
-                          فتح المصدر
-                          <span aria-hidden="true">↗</span>
-                        </a>
-                      ) : (
-                        <span className="inline-flex mt-2.5 text-[12px] text-sutra-ink-3">مرجع من المجموعة</span>
-                      )}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                          عرض
+                        </button>
+                        {source && (
+                          <a
+                            href={source}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => void corpusService.recordSourceClick({ query: caseData.title, document_id: reference.document_id, result_count: visibleRelatedCorpusCases.length })}
+                            className="inline-flex items-center gap-1 text-[12px] font-semibold text-sutra-ink-3 hover:text-navy hover:underline cursor-pointer"
+                          >
+                            فتح المصدر
+                            <span aria-hidden="true">↗</span>
+                          </a>
+                        )}
+                      </div>
                     </article>
                   );
                   })}
