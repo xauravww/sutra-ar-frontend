@@ -131,6 +131,24 @@ export default function MediationSessionPage() {
   const pendingCount = files.filter(f => f.status === "pending").length;
   const uploadingCount = files.filter(f => f.status === "uploading").length;
   const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type: string } | null>(null);
+  // The inline PDF viewer lives inside the Documents tab; when a document is
+  // opened from another tab (e.g. a corpus reference PDF on the Analysis tab)
+  // we hop to Documents to show it and hop back on close.
+  const [returnTab, setReturnTab] = useState<Tab | null>(null);
+  const openPreview = (file: { name: string; url: string; type: string }, from?: Tab) => {
+    setPreviewFile(file);
+    if (from && tab !== "documents") {
+      setReturnTab(from);
+      setTab("documents");
+    }
+  };
+  const closePreview = () => {
+    setPreviewFile(null);
+    if (returnTab) {
+      setTab(returnTab);
+      setReturnTab(null);
+    }
+  };
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -620,7 +638,7 @@ export default function MediationSessionPage() {
                                 </div>
                                 {sc.outcome && <p className="text-[13px] text-sutra-ink-2"><span className="font-semibold text-sutra-ink">المنطوق:</span> {sc.outcome}</p>}
                                 {sc.excerpt && <p className="text-[12px] sm:text-[13px] text-sutra-ink-3 leading-relaxed line-clamp-3">{sc.excerpt}</p>}
-                                {sc.pdf_url && <a href={sc.pdf_url} target="_blank" rel="noreferrer" className="inline-flex text-[12px] font-semibold text-navy hover:underline">فتح ملف PDF المرجعي</a>}
+                                {sc.pdf_url && <button type="button" onClick={() => openPreview({ name: `${sc.title || "قضية مرجعية"}.pdf`, url: sc.pdf_url, type: "application/pdf" }, "analysis")} className="inline-flex text-[12px] font-semibold text-navy hover:underline">عرض ملف PDF المرجعي</button>}
                               </div>
                             ))}
                           </div>
@@ -678,7 +696,7 @@ export default function MediationSessionPage() {
                       {/* Preview toolbar */}
                       <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-sutra-line bg-[#FAFBFD] flex-none">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <button onClick={() => setPreviewFile(null)} className="inline-flex items-center gap-1 text-navy font-semibold text-[13px] sm:text-[14px] hover:text-navy-dark transition-colors group flex-none">
+                          <button onClick={closePreview} className="inline-flex items-center gap-1 text-navy font-semibold text-[13px] sm:text-[14px] hover:text-navy-dark transition-colors group flex-none">
                             <span className="rtl-flip inline-flex"><I.ChevronL className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" /></span>رجوع
                           </button>
                           <span className="w-px h-4 bg-sutra-line" />
@@ -819,9 +837,13 @@ export default function MediationSessionPage() {
                                 {d.file_size_bytes && <span className="text-[11px] sm:text-[12px] text-sutra-ink-3">{bytes(d.file_size_bytes)}</span>}
                               </div>
                             </div>
-                            {/* Preview */}
+                            {/* Preview — presigned URLs carry query params, so match on
+                                the pathname portion rather than endsWith(".pdf") */}
                             {d.file_url && (
-                              <button onClick={() => setPreviewFile({ name: d.original_filename || "مستند", url: d.file_url, type: d.file_url?.endsWith(".pdf") ? "application/pdf" : "image/" })} className="flex-none w-8 h-8 rounded-lg grid place-items-center text-sutra-ink-3 hover:text-navy hover:bg-tint transition-colors opacity-0 group-hover:opacity-100" title="معاينة">
+                              <button onClick={() => {
+                                const isPdf = !!d.file_url && (d.file_url.split("?")[0].endsWith(".pdf") || /\.pdf(\?|$)/i.test(d.file_url));
+                                openPreview({ name: d.original_filename || "مستند", url: d.file_url, type: isPdf ? "application/pdf" : "image/" }, "documents");
+                              }} className="flex-none w-8 h-8 rounded-lg grid place-items-center text-sutra-ink-3 hover:text-navy hover:bg-tint transition-colors opacity-0 group-hover:opacity-100" title="معاينة">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
                               </button>
                             )}
