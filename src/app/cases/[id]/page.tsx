@@ -6,6 +6,10 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import { Spinner } from "@/components/ui/Button";
 import { judicialCases, ApiError, type JudicialCaseDetail, type JudicialDocument, type JudicialCaseCard } from "@/lib/api";
+// Mirror of the backend's upload caps (tvsbackend/src/config/uploadLimits.config.ts)
+// so oversized or over-quota drops are stopped client-side with a clear message.
+const MAX_DOCS_PER_CASE = 20;
+const MAX_FILE_SIZE_MB = 25;
 import { corpusService, type CorpusSearchHit } from "@/lib/corpus";
 import { useNotify } from "@/components/ui/Notify";
 import Markdown from "react-markdown";
@@ -536,19 +540,37 @@ export default function CaseDetailPage() {
     if (rejected > 0) toast(`تم تجاوز ${n(rejected)} من الملفات غير المدعومة. يُقبل PDF فقط.`, "error");
     if (files.length === 0) return;
 
+    // Client-side mirror of the server's limits so users get feedback before a
+    // doomed multipart request (server is authoritative — see
+    // tvsbackend/src/config/uploadLimits.config.ts).
+    const existingCount = caseData?.documents?.length ?? 0;
+    const roomFor = Math.max(0, MAX_DOCS_PER_CASE - existingCount);
+    const oversized = files.filter((f) => f.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (oversized.length > 0) {
+      toast(`تم تجاوز ${n(oversized.length)} من الملفات — الحد الأقصى لحجم الملف ${n(MAX_FILE_SIZE_MB)} ميجابايت.`, "error");
+      return;
+    }
+    if (files.length > roomFor) {
+      toast(
+        roomFor === 0
+          ? `وصلت هذه القضية إلى الحد الأقصى (${n(MAX_DOCS_PER_CASE)} مستندًا). احذف مستندًا قبل الرفع.`
+          : `يمكن رفع ${n(roomFor)} مستندًا فقط — الحد الأقصى ${n(MAX_DOCS_PER_CASE)} مستندًا للقضية.`,
+        "error"
+      );
+      return;
+    }
+
     setUploading(true);
     try {
       const res = await judicialCases.uploadDocuments(
         caseId,
         files.map((f) => ({ file: f, docType: "OTHER" }))
       );
-      // Server auto-starts extraction; reflect that and poll for the result.
-      setCaseData({ ...res.data, status: "processing" });
-      setDocumentAnalysis(Object.fromEntries(
-        (res.data.documents ?? []).map((doc, index) => [doc.id, index === 0 ? "analyzing" : "pending"])
-      ));
-      toast(`${count(files.length, DOCS)} رُفعت. بدأ التحليل في الخلفية.`, "success");
-      startPolling();
+      // Analysis no longer auto-starts with upload — the user runs it
+      // explicitly from "Run Case Analysis". Just show the fresh list.
+      setCaseData(res.data);
+      setDocumentAnalysis({});
+      toast(`${count(files.length, DOCS)} رُفعت. شغّل «تحليل القضية» عندما تكون جاهزًا.`, "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "تعذّر الرفع", "error");
     } finally {
@@ -1022,7 +1044,7 @@ export default function CaseDetailPage() {
               {showSampleData && (
                 <div className="mt-3 space-y-2" aria-label="قضايا نموذجية">
                   {sampleLoading && <p className="text-[12px] text-sutra-ink-3">جارٍ تحميل المستندات النموذجية…</p>}
-                  {!sampleLoading && selectedSampleCase && <p className="text-[12px] text-green-700">جارٍ رفع المستندات النموذجية وسيبدأ التحليل تلقائيًا.</p>}
+                  {!sampleLoading && selectedSampleCase && <p className="text-[12px] text-green-700">جارٍ رفع المستندات النموذجية — شغّل التحليل من زر «تحليل القضية» بعد الرفع.</p>}
                   {SAMPLE_CASES.map((sample) => (
                     <div
                       key={sample.id}
@@ -1113,6 +1135,9 @@ export default function CaseDetailPage() {
                 </p>
                 <p className="text-[12px] text-sutra-ink-3 mt-1">
                   محضر البلاغ · قرار الإحالة · الإفادات · الأدلة · القرارات
+                </p>
+                <p className="text-[11px] text-sutra-ink-3 mt-1">
+                  حتى {n(MAX_DOCS_PER_CASE)} مستندًا للقضية · {n(MAX_FILE_SIZE_MB)} ميجابايت لكل ملف
                 </p>
               </>
             )}

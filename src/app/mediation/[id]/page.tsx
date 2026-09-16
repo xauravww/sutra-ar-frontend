@@ -5,6 +5,9 @@ import TopBar from "@/components/TopBar";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { mediation, type MediationSession } from "@/lib/api";
+// Mirror of the backend's upload caps (tvsbackend/src/config/uploadLimits.config.ts).
+const MAX_DOCS_PER_CASE = 20;
+const MAX_FILE_SIZE_MB = 25;
 import { getSessionStage, hasCompletedAnalysis, type MaybeSession } from "@/lib/mediationStatus";
 import Ltr from "@/components/Ltr";
 import { bytes, count, date, dateTime, n, percent, type PluralForms } from "@/lib/num";
@@ -247,14 +250,34 @@ export default function MediationSessionPage() {
 
   const addFiles = (incoming: FileList | File[], party: "A" | "B" | "both" = "both") => {
     const arr = Array.from(incoming);
+    // Client-side mirror of the server's upload caps
+    // (tvsbackend/src/config/uploadLimits.config.ts) — the server is authoritative.
     const valid = arr.filter(f => f.type === "application/pdf" || f.type.startsWith("image/"));
-    const mapped = valid.map(f => ({
+    const oversized = valid.filter(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (oversized.length > 0) {
+      showToast(`تم تجاهل ${n(oversized.length)} من الملفات — الحد الأقصى لحجم الملف ${n(MAX_FILE_SIZE_MB)} ميجابايت.`, "error");
+    }
+    const acceptable = valid.filter(f => f.size <= MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (acceptable.length === 0) return;
+    // Keep the queued count within the session quota (already-stored docs + queue).
+    const storedCount = session?.documents?.length ?? 0;
+    const roomFor = Math.max(0, MAX_DOCS_PER_CASE - storedCount - files.length);
+    if (acceptable.length > roomFor) {
+      showToast(
+        roomFor === 0
+          ? `وصلت الجلسة إلى الحد الأقصى (${n(MAX_DOCS_PER_CASE)} مستندًا).`
+          : `يمكن إضافة ${n(roomFor)} مستندًا فقط — الحد الأقصى ${n(MAX_DOCS_PER_CASE)} مستندًا للجلسة.`,
+        "error"
+      );
+    }
+    const mapped = acceptable.slice(0, roomFor).map(f => ({
       id: Math.random().toString(36).slice(2, 9),
       file: f,
       party,
       preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : null,
       status: "pending" as FileStatus,
     }));
+    if (mapped.length === 0) return;
     setFiles(prev => [...prev, ...mapped]);
   };
   const removeFile = (id: string) => setFiles(prev => prev.filter(f => f.id !== id));
