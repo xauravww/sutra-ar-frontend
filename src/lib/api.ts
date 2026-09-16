@@ -1388,6 +1388,47 @@ export const systemSettings = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Admin env overrides (whitelisted keys, masked responses)           */
+/* ------------------------------------------------------------------ */
+
+export interface AdminEnvKeyInfo {
+  key: string;
+  label: string;
+  description: string;
+  readonly: boolean;
+  secret: boolean;
+  type: "text" | "number" | "url";
+  is_set: boolean;
+  /** Masked "••••••••" for readonly/secret keys; effective value otherwise. */
+  value: string | null;
+  overridden: boolean;
+}
+
+export interface AdminEnvOverridesInfo {
+  entries: AdminEnvKeyInfo[];
+  editable_keys: string[];
+}
+
+export const adminEnvOverrides = {
+  list: () =>
+    request<{ success: boolean; data: AdminEnvOverridesInfo }>(
+      "/api/v1/admin/env-overrides"
+    ),
+
+  save: (overrides: Record<string, string>) =>
+    request<{ success: boolean; message: string }>(
+      "/api/v1/admin/env-overrides",
+      { method: "PUT", json: { overrides } }
+    ),
+
+  clear: (key: string) =>
+    request<{ success: boolean; message: string }>(
+      `/api/v1/admin/env-overrides/${encodeURIComponent(key)}`,
+      { method: "DELETE" }
+    ),
+};
+
+/* ------------------------------------------------------------------ */
 /*  Rate-limit policies (owner)                                        */
 /* ------------------------------------------------------------------ */
 

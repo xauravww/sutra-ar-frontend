@@ -22,6 +22,7 @@ import {
   Menu,
   X,
   type LucideIcon,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import Logo from "@/components/Logo";
@@ -40,6 +41,7 @@ export const ADMIN_NAV: Array<{ href: string; label: string; icon: LucideIcon; o
   { href: "/admin/reports", label: "التقارير", icon: BarChart3 },
   { href: "/admin/usage", label: "استخدام الذكاء الاصطناعي", icon: Coins, ownerOnly: true },
   { href: "/admin/rate-limits", label: "حدود المعدل", icon: Gauge, ownerOnly: true },
+  { href: "/admin/env-overrides", label: "مفاتيح البيئة", icon: KeyRound, ownerOnly: true },
   { href: "/admin/activity-logs", label: "سجلات النشاط", icon: History },
   { href: "/admin/settings", label: "الإعدادات", icon: Settings },
 ];
